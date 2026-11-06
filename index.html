@@ -1,0 +1,884 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101018">
+<title>NOVA AI</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<style>
+:root{
+ --bg:#101018;--side:#15151f;--panel:#1b1b28;--panel2:#222232;
+ --text:#f4f3fa;--muted:#9291a5;--accent:#a58bff;
+ --accent2:#7356dc;--border:#2d2b3c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Tahoma,sans-serif;height:100vh;overflow:hidden}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+.app{display:flex;height:100vh}
+.sidebar{
+ width:275px;background:var(--side);border-left:1px solid var(--border);
+ display:flex;flex-direction:column;padding:17px;transition:.25s;flex-shrink:0
+}
+.brand{display:flex;align-items:center;gap:11px;font-size:23px;font-weight:bold;margin:7px 0 27px}
+.brand span{color:var(--accent)}
+.brand-icon{width:39px;height:39px;border-radius:13px;background:linear-gradient(140deg,#a98aff,#6342cf);display:grid;place-items:center;box-shadow:0 5px 20px #7356dc44}
+.brand-icon svg{width:24px}
+.newchat{width:100%;padding:13px;border-radius:11px;border:1px solid #403858;background:#252137;color:white;text-align:right}
+.newchat:hover{background:#342b4e}
+.side-label{color:var(--muted);font-size:12px;margin:25px 0 10px}
+.search{width:100%;background:#20202c;border:1px solid var(--border);border-radius:9px;padding:11px;color:white;outline:none}
+.search:focus{border-color:var(--accent)}
+.history{overflow:auto;flex:1;margin-top:10px}
+.history-item{padding:12px;border-radius:9px;color:#c6c4d2;font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px}
+.history-item:hover,.history-item.selected{background:#29273a;color:white}
+.history-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.delete{background:none;border:0;color:#89859b;font-size:17px;opacity:0}
+.history-item:hover .delete{opacity:1}
+.side-bottom{border-top:1px solid var(--border);padding-top:12px}
+.side-action{width:100%;padding:12px;background:none;border:0;color:#c6c4d2;text-align:right;border-radius:9px}
+.side-action:hover{background:#252532}
+.user-profile{display:flex;align-items:center;gap:11px;padding:12px 5px 3px}
+.avatar{width:37px;height:37px;border-radius:50%;background:linear-gradient(135deg,#aa91ff,#6747d3);display:grid;place-items:center;font-weight:bold;overflow:hidden;flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.user-profile small{color:var(--muted)}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+.topbar{height:65px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border);background:#11111a;flex-shrink:0}
+.top-left{display:flex;align-items:center;gap:13px}
+.topbar strong{font-size:15px}
+.iconbtn{width:38px;height:38px;border-radius:10px;background:var(--panel);border:1px solid var(--border);color:white;font-size:18px}
+.iconbtn:hover{border-color:var(--accent);background:#29243b}
+.status{font-size:11px;color:#8bd9b1}
+.status i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#64d6a0;margin-left:5px}
+.status.busy{color:#d2bdff}
+.status.busy i{background:#a58bff;animation:pulse 1s infinite}
+.status.error{color:#ff9999}
+.status.error i{background:#ff7777}
+@keyframes pulse{50%{opacity:.3}}
+.content{flex:1;overflow-y:auto;padding:30px 18px 20px;scroll-behavior:smooth}
+.welcome{max-width:800px;margin:35px auto 20px;text-align:center}
+.hero-art{width:min(100%,410px);height:235px;margin:0 auto 15px}
+.welcome h1{font-size:34px;margin:12px 0}
+.gradient{background:linear-gradient(90deg,#c0aaff,#8d72ff,#74c9ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.welcome p{color:var(--muted);font-size:15px;line-height:1.9}
+.suggestions{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:680px;margin:35px auto;text-align:right}
+.suggestion{background:var(--panel);border:1px solid var(--border);padding:17px;border-radius:13px;color:white;cursor:pointer;text-align:right;transition:.2s}
+.suggestion:hover{border-color:var(--accent);transform:translateY(-2px)}
+.suggestion strong{display:block;margin-bottom:7px}
+.suggestion small{color:var(--muted)}
+.sicon{font-size:20px;margin-bottom:10px}
+.messages{max-width:790px;width:100%;margin:auto}
+.message{display:flex;gap:12px;margin:22px 0;align-items:flex-start;line-height:1.9}
+.message.user{flex-direction:row-reverse}
+.message-avatar{flex-shrink:0;width:34px;height:34px;border-radius:11px;background:#29243b;display:grid;place-items:center;color:var(--accent);font-size:13px}
+.message.user .message-avatar{background:#302746;color:white}
+.message-content{max-width:85%;min-width:0}
+.message-text{background:#1d1c29;border:1px solid var(--border);border-radius:13px;padding:12px 16px;white-space:pre-wrap;overflow-wrap:anywhere}
+.message.user .message-text{background:#292438}
+.message.error .message-text{border-color:#784848;color:#ffb4b4}
+.message-tools{display:flex;gap:7px;margin:6px 4px 0}
+.message-tools button{background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:11px;padding:4px 9px}
+.message-tools button:hover{color:white;border-color:var(--accent)}
+.typing{display:flex;gap:5px;align-items:center;padding:15px;width:max-content}
+.typing span{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bounce 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-6px);opacity:1}}
+.composer-area{padding:12px 18px 16px;background:linear-gradient(transparent,var(--bg) 20%);flex-shrink:0}
+.composer{max-width:790px;margin:auto;background:#20202d;border:1px solid #39354d;border-radius:17px;padding:10px;display:flex;align-items:flex-end;gap:10px}
+.composer:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px #a58bff12}
+.composer textarea{flex:1;min-width:0;max-height:150px;min-height:40px;resize:none;background:transparent;border:0;outline:0;color:white;padding:11px;line-height:1.6}
+.send{width:43px;height:43px;flex-shrink:0;border:0;border-radius:12px;background:var(--accent);color:#171321;font-size:22px;font-weight:bold}
+.send:hover{background:#c0adff}
+.send:disabled{opacity:.4;cursor:not-allowed}
+.send.stop{background:#ff8585;color:#241313;font-size:17px}
+.send.stop:hover{background:#ffaaaa}
+.disclaimer{text-align:center;color:#77758b;font-size:11px;margin:12px 0 0}
+.modal-bg{display:none;position:fixed;inset:0;background:#000b;z-index:10;align-items:center;justify-content:center;padding:15px}
+.modal{background:var(--side);border:1px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:420px;max-height:85vh;overflow:auto}
+.modal h2{margin-top:0}
+.modal p{color:var(--muted);font-size:13px;line-height:1.8}
+.modal input{width:100%;background:var(--panel);color:white;border:1px solid var(--border);padding:12px;border-radius:9px;margin:8px 0}
+.modal button{padding:10px 15px;border-radius:9px;margin:3px}
+.primary{background:var(--accent);border:0;color:#171321}
+.secondary{background:var(--panel2);border:1px solid var(--border);color:white}
+.hidden{display:none!important}
+.mobile-overlay{display:none}
+.toast{position:fixed;bottom:95px;left:50%;transform:translateX(-50%);background:#29243b;border:1px solid var(--border);color:white;padding:10px 16px;border-radius:10px;font-size:13px;z-index:30;opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.app.sidebar-collapsed .sidebar{display:none}
+
+/* شاشة تسجيل الدخول */
+.auth-screen{
+ position:fixed;inset:0;z-index:1000;background:#101018;
+ display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.auth-card{
+ width:100%;max-width:390px;background:#15151f;
+ border:1px solid #2d2b3c;border-radius:22px;padding:35px 25px;
+ text-align:center;box-shadow:0 20px 70px #0007;
+}
+.auth-logo{
+ width:65px;height:65px;border-radius:20px;margin:0 auto 20px;
+ display:grid;place-items:center;background:linear-gradient(140deg,#a98aff,#6342cf);
+ font-size:30px;box-shadow:0 5px 25px #7356dc55;
+}
+.auth-card h1{font-size:29px;margin:0 0 10px}
+.auth-card p{color:#9291a5;font-size:14px;line-height:1.8;margin:0 0 25px}
+.google-btn{
+ width:100%;padding:14px;border-radius:12px;background:white;color:#242424;
+ border:0;font-weight:bold;font-size:15px;display:flex;align-items:center;
+ justify-content:center;gap:12px;
+}
+.google-btn:hover{background:#eee}
+.google-btn:disabled{opacity:.6;cursor:wait}
+.google-icon{width:20px;height:20px}
+.auth-error{color:#ff9999;font-size:12px;line-height:1.7;margin-top:15px;display:none;overflow-wrap:anywhere}
+.auth-note{color:#77758b;font-size:11px;margin-top:20px}
+.logout-btn{width:100%;padding:10px;background:none;border:1px solid var(--border);color:#ffaaaa;border-radius:9px;margin-top:10px;text-align:right}
+.logout-btn:hover{background:#382329}
+
+@media(max-width:700px){
+ .sidebar{position:fixed;right:0;top:0;bottom:0;z-index:12;transform:translateX(110%);width:280px;box-shadow:-10px 0 35px #0005}
+ .sidebar.open{transform:translateX(0)!important}
+ .mobile-overlay.show{display:block;position:fixed;inset:0;background:#0009;z-index:11}
+ .welcome{margin-top:15px}
+ .welcome h1{font-size:27px}
+ .hero-art{height:190px}
+ .suggestions{grid-template-columns:1fr;margin:25px auto}
+ .topbar{padding:0 13px}
+ .content{padding:20px 12px}
+ .composer-area{padding:10px}
+ .message-content{max-width:calc(100% - 46px)}
+ .message-text{max-width:100%}
+ .status{font-size:10px}
+}
+</style>
+</head>
+
+<body>
+
+<!-- تسجيل الدخول -->
+<div class="auth-screen" id="authScreen">
+ <div class="auth-card">
+  <div class="auth-logo">✦</div>
+  <h1>NOVA <span class="gradient">AI</span></h1>
+  <p>مرحباً بك في NOVA AI.<br>سجّل الدخول بحساب Google للمتابعة.</p>
+  <button class="google-btn" id="googleLoginBtn" onclick="loginWithGoogle()">
+   <svg class="google-icon" viewBox="0 0 48 48">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.01 13.22l7.98 6.19C11.89 13.72 17.48 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.97 46.98 31.8 46.98 24.55z"/>
+    <path fill="#FBBC05" d="M9.99 28.59A14.4 14.4 0 0 1 9.2 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.53 2.58 10.78l7.41-6.19z"/>
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.91 2.3-8.18 2.3-6.52 0-12.11-4.22-14.01-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+   </svg>
+   <span>المتابعة باستخدام Google</span>
+  </button>
+  <div class="auth-error" id="authError"></div>
+  <div class="auth-note">تسجيل الدخول آمن عبر Google وFirebase.</div>
+ </div>
+</div>
+
+<div class="app hidden" id="app">
+
+<aside class="sidebar" id="sidebar">
+ <div class="brand">
+  <div class="brand-icon">
+   <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+    <path d="M12 2L14.5 9.5 22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5z"/>
+   </svg>
+  </div>
+  NOVA <span>AI</span>
+ </div>
+
+ <button class="newchat" onclick="newChat()">＋ محادثة جديدة</button>
+
+ <div class="side-label">محادثاتك السابقة</div>
+ <input class="search" id="search" placeholder="⌕ بحث عن محادثة..." oninput="renderHistory()">
+ <div class="history" id="history"></div>
+
+ <div class="side-bottom">
+  <button class="side-action" onclick="openSettings()">⚙ الإعدادات</button>
+  <button class="side-action" onclick="showAbout()">✦ حول NOVA AI</button>
+  <div class="user-profile">
+   <div class="avatar" id="profileAvatar">ح</div>
+   <div style="min-width:0;overflow:hidden">
+    <strong style="font-size:13px" id="profileName">المستخدم</strong><br>
+    <small id="profileEmail">حساب Google</small>
+   </div>
+  </div>
+  <button class="logout-btn" onclick="logout()">↪ تسجيل الخروج</button>
+ </div>
+</aside>
+
+<div class="mobile-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<main class="main">
+ <header class="topbar">
+  <div class="top-left">
+   <button class="iconbtn" onclick="toggleSidebar()" aria-label="فتح أو إغلاق القائمة">☰</button>
+   <strong>NOVA AI</strong>
+  </div>
+  <div class="status" id="status"><i></i> جاهز للاتصال</div>
+ </header>
+
+ <div class="content" id="content">
+  <div class="welcome" id="welcome">
+   <svg class="hero-art" viewBox="0 0 430 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+     <linearGradient id="g1" x1="80" y1="40" x2="340" y2="220">
+      <stop stop-color="#BBA4FF"/><stop offset="1" stop-color="#6850D9"/>
+     </linearGradient>
+     <filter id="glow"><feGaussianBlur stdDeviation="9"/></filter>
+    </defs>
+    <circle cx="215" cy="120" r="91" fill="#8262EA" opacity=".12" filter="url(#glow)"/>
+    <circle cx="215" cy="120" r="83" stroke="#8D73EA" stroke-opacity=".3" stroke-dasharray="4 8"/>
+    <circle cx="215" cy="120" r="66" stroke="#B49DFF" stroke-opacity=".5"/>
+    <path d="M215 38L230 99L291 120L230 141L215 202L200 141L139 120L200 99Z" fill="url(#g1)" fill-opacity=".2" stroke="url(#g1)" stroke-width="2"/>
+    <path d="M215 77L226 109L258 120L226 131L215 163L204 131L172 120L204 109Z" fill="url(#g1)"/>
+    <circle cx="215" cy="120" r="8" fill="white"/>
+    <circle cx="215" cy="120" r="15" stroke="white" stroke-opacity=".4"/>
+    <path d="M73 78L105 78L117 90" stroke="#9C84F1" stroke-width="2"/>
+    <circle cx="73" cy="78" r="4" fill="#BBA4FF"/>
+    <path d="M328 164L350 164L365 149" stroke="#9C84F1" stroke-width="2"/>
+    <circle cx="365" cy="149" r="4" fill="#BBA4FF"/>
+    <rect x="40" y="112" width="65" height="35" rx="9" fill="#28213E" stroke="#6754A1"/>
+    <path d="M56 129L63 122L70 129L77 122L85 129" stroke="#B9A3FF" stroke-width="2"/>
+    <rect x="324" y="54" width="67" height="38" rx="9" fill="#28213E" stroke="#6754A1"/>
+    <circle cx="340" cy="73" r="5" fill="#B9A3FF"/>
+    <path d="M351 68H379M351 77H370" stroke="#A68BF4" stroke-width="2" stroke-linecap="round"/>
+    <path d="M111 202H155M133 191V213" stroke="#8B74DF" stroke-opacity=".7"/>
+    <path d="M285 30H310M297 18V42" stroke="#8B74DF" stroke-opacity=".7"/>
+   </svg>
+
+   <h1>مرحباً بك في <span class="gradient">NOVA AI</span></h1>
+   <p>عالم من الأفكار والإبداع والمعرفة.<br>ابدأ محادثة جديدة واكتشف إمكانياتك.</p>
+
+   <div class="suggestions">
+    <button class="suggestion" onclick="suggest('ساعدني في اكتشاف أفكار جديدة ومشاريع إبداعية')"><div class="sicon">💡</div><strong>اكتشف أفكاراً جديدة</strong><small>ابدأ مشروعاً إبداعياً</small></button>
+    <button class="suggestion" onclick="suggest('أريد تعلم مهارة جديدة، اقترح علي مهارات ممتعة')"><div class="sicon">📚</div><strong>تعلم شيئاً جديداً</strong><small>اكتشف مهارات ومعارف</small></button>
+    <button class="suggestion" onclick="suggest('ساعدني في كتابة قصة خيالية')"><div class="sicon">✍️</div><strong>اصنع قصة</strong><small>أطلق العنان لخيالك</small></button>
+    <button class="suggestion" onclick="suggest('اقترح علي تحدياً ممتعاً للقيام به اليوم')"><div class="sicon">🚀</div><strong>تحدّ نفسك</strong><small>ابدأ تحدياً جديداً</small></button>
+   </div>
+  </div>
+
+  <div class="messages" id="messages"></div>
+ </div>
+
+ <div class="composer-area">
+  <div class="composer">
+   <textarea id="prompt" rows="1" placeholder="اسأل NOVA عن أي شيء..." onkeydown="handleKey(event)" oninput="resizePrompt()"></textarea>
+   <button class="send" id="send" onclick="sendMessage()" aria-label="إرسال">↑</button>
+  </div>
+  <div class="disclaimer">NOVA AI — مشروع من تطوير حمزة أيت افقير</div>
+ </div>
+</main>
+</div>
+
+<div class="modal-bg" id="modal">
+ <div class="modal">
+  <h2 id="modalTitle">الإعدادات</h2>
+  <div id="modalBody"></div>
+  <button class="secondary" onclick="closeModal()">إغلاق</button>
+ </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* إعداد Firebase */
+const firebaseConfig = {
+ apiKey: "AIzaSyBtC9txPACasALdj0ig2Mk7nPC56-oCOx",
+ authDomain: "nova-ai-f0798.firebaseapp.com",
+ projectId: "nova-ai-f0798",
+ storageBucket: "nova-ai-f0798.firebasestorage.app",
+ messagingSenderId: "246447444616",
+ appId: "1:246447444616:web:88f521cf19f43f463c853d",
+ measurementId: "G-JPQMP3J9X2"
+};
+
+if (!firebase.apps.length) {
+ firebase.initializeApp(firebaseConfig);
+}
+
+const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+googleProvider.setCustomParameters({prompt:"select_account"});
+
+const API_URL = "https://nova-ai-api.hamzagames693.workers.dev/api/chat";
+const $ = id => document.getElementById(id);
+
+let currentUser = null;
+let chats = [];
+let activeId = null;
+let isSending = false;
+let abortController = null;
+let toastTimer;
+let authReady = false;
+
+function showAuthError(message) {
+ const el = $("authError");
+ el.textContent = message;
+ el.style.display = "block";
+}
+
+function hideAuthError() {
+ $("authError").textContent = "";
+ $("authError").style.display = "none";
+}
+
+function setLoginLoading(loading) {
+ const btn = $("googleLoginBtn");
+ btn.disabled = loading;
+ btn.querySelector("span").textContent = loading
+  ? "جارٍ فتح حساب Google..."
+  : "المتابعة باستخدام Google";
+}
+
+async function loginWithGoogle() {
+ hideAuthError();
+ setLoginLoading(true);
+
+ try {
+  await auth.signInWithPopup(googleProvider);
+ } catch(error) {
+  console.error("Google sign-in error:", error);
+
+  if (
+   error.code === "auth/popup-blocked" ||
+   error.code === "auth/popup-closed-by-user" ||
+   error.code === "auth/operation-not-supported-in-this-environment"
+  ) {
+   try {
+    await auth.signInWithRedirect(googleProvider);
+    return;
+   } catch(redirectError) {
+    console.error("Google redirect error:", redirectError);
+    showAuthError(firebaseErrorMessage(redirectError));
+   }
+  } else {
+   showAuthError(firebaseErrorMessage(error));
+  }
+ } finally {
+  setLoginLoading(false);
+ }
+}
+
+function firebaseErrorMessage(error) {
+ const code = error && error.code ? error.code : "unknown";
+ const message = error && error.message ? error.message : "خطأ غير معروف";
+ return "تعذر تسجيل الدخول.\nرمز الخطأ: " + code + "\n" + message;
+}
+
+async function logout() {
+ if (isSending && abortController) abortController.abort();
+
+ try {
+  await auth.signOut();
+  showToast("تم تسجيل الخروج.");
+ } catch(error) {
+  console.error(error);
+  showToast("تعذر تسجيل الخروج.");
+ }
+}
+
+/* تحميل محادثات الحساب الحالي */
+function loadUserChats(user) {
+ const userKey = "nova_chats_" + user.uid;
+
+ try {
+  const savedUserChats = localStorage.getItem(userKey);
+
+  if (savedUserChats !== null) {
+   chats = JSON.parse(savedUserChats);
+   if (!Array.isArray(chats)) chats = [];
+  } else {
+   // نقل المحادثات القديمة إلى الحساب عند أول تسجيل دخول
+   let oldChats = [];
+   try {
+    oldChats = JSON.parse(localStorage.getItem("nova_chats") || "[]");
+    if (!Array.isArray(oldChats)) oldChats = [];
+   } catch(e) {
+    oldChats = [];
+   }
+
+   chats = oldChats;
+   localStorage.setItem(userKey, JSON.stringify(chats));
+  }
+ } catch(error) {
+  console.error("Chat storage error:", error);
+  chats = [];
+ }
+
+ activeId = null;
+ $("messages").innerHTML = "";
+ $("welcome").classList.remove("hidden");
+ $("prompt").value = "";
+ resizePrompt();
+ renderHistory();
+}
+
+function save() {
+ if (!currentUser) return;
+
+ try {
+  localStorage.setItem(
+   "nova_chats_" + currentUser.uid,
+   JSON.stringify(chats)
+  );
+ } catch(e) {
+  showToast("مساحة حفظ المحادثات ممتلئة.");
+ }
+}
+
+function current() {
+ return chats.find(c => c.id === activeId);
+}
+
+function updateProfile(user) {
+ const name = user.displayName || "مستخدم NOVA";
+ const email = user.email || "حساب Google";
+
+ $("profileName").textContent = name;
+ $("profileEmail").textContent = email;
+
+ const avatar = $("profileAvatar");
+ avatar.replaceChildren();
+
+ if (user.photoURL) {
+  const img = document.createElement("img");
+  img.src = user.photoURL;
+  img.alt = "صورة الحساب";
+  img.referrerPolicy = "no-referrer";
+  img.onerror = () => {
+   avatar.textContent = name.trim().charAt(0) || "م";
+  };
+  avatar.append(img);
+ } else {
+  avatar.textContent = name.trim().charAt(0) || "م";
+ }
+}
+
+/* مراقبة حالة تسجيل الدخول */
+auth.getRedirectResult().catch(error => {
+ console.error("Redirect result error:", error);
+ showAuthError(firebaseErrorMessage(error));
+});
+
+auth.onAuthStateChanged(user => {
+ currentUser = user || null;
+ authReady = true;
+
+ if (user) {
+  $("authScreen").classList.add("hidden");
+  $("app").classList.remove("hidden");
+
+  updateProfile(user);
+  loadUserChats(user);
+  setStatus("جاهز للاتصال");
+ } else {
+  $("app").classList.add("hidden");
+  $("authScreen").classList.remove("hidden");
+  chats = [];
+  activeId = null;
+  $("messages").innerHTML = "";
+  setLoginLoading(false);
+ }
+});
+
+/* بقية وظائف NOVA AI */
+function setStatus(message, type = "") {
+ const status = $("status");
+ status.className = "status " + type;
+ status.replaceChildren();
+ const dot = document.createElement("i");
+ status.append(dot, document.createTextNode(" " + message));
+}
+
+function showToast(message) {
+ const toast = $("toast");
+ toast.textContent = message;
+ toast.classList.add("show");
+ clearTimeout(toastTimer);
+ toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+function toggleSidebar() {
+ if (window.innerWidth <= 700) {
+  $("sidebar").classList.toggle("open");
+  $("overlay").classList.toggle("show");
+ } else {
+  $("app").classList.toggle("sidebar-collapsed");
+ }
+}
+
+function closeSidebar() {
+ $("sidebar").classList.remove("open");
+ $("overlay").classList.remove("show");
+}
+
+function newChat() {
+ activeId = null;
+ $("messages").innerHTML = "";
+ $("welcome").classList.remove("hidden");
+ $("prompt").value = "";
+ resizePrompt();
+ renderHistory();
+ closeSidebar();
+ $("prompt").focus();
+ setStatus(isSending ? "NOVA يفكر..." : "جاهز للاتصال", isSending ? "busy" : "");
+}
+
+function createChat() {
+ const chat = {
+  id: Date.now() + Math.floor(Math.random() * 1000),
+  title: "محادثة جديدة",
+  messages: [],
+  date: new Date().toISOString()
+ };
+ chats.unshift(chat);
+ activeId = chat.id;
+ save();
+ return chat;
+}
+
+function stopGeneration() {
+ if (!isSending || !abortController) return;
+ abortController.abort();
+ setStatus("تم إيقاف الإجابة");
+ showToast("تم إيقاف NOVA.");
+}
+
+async function sendMessage() {
+ if (!currentUser) {
+  showToast("سجّل الدخول أولاً.");
+  return;
+ }
+
+ if (isSending) {
+  stopGeneration();
+  return;
+ }
+
+ const value = $("prompt").value.trim();
+ if (!value) return;
+
+ let chat = current();
+ if (!chat) chat = createChat();
+
+ const chatId = chat.id;
+
+ if (chat.messages.length === 0) {
+  chat.title = value.slice(0, 45);
+ }
+
+ chat.messages.push({role:"user", text:value});
+ $("prompt").value = "";
+ resizePrompt();
+ $("welcome").classList.add("hidden");
+
+ isSending = true;
+ abortController = new AbortController();
+
+ $("send").disabled = false;
+ $("send").classList.add("stop");
+ $("send").textContent = "■";
+ $("send").setAttribute("aria-label", "إيقاف الإجابة");
+ $("prompt").disabled = true;
+
+ setStatus("NOVA يفكر...", "busy");
+ save();
+ renderMessages();
+ renderHistory();
+
+ try {
+  const messages = chat.messages
+   .filter(m => (m.role === "user" || m.role === "assistant") && typeof m.text === "string")
+   .slice(-12)
+   .map(m => ({role:m.role, content:m.text}));
+
+  const response = await fetch(API_URL, {
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({messages}),
+   signal:abortController.signal
+  });
+
+  let data;
+  try {
+   data = await response.json();
+  } catch(e) {
+   throw new Error("الخادم أرسل رداً غير مفهوم.");
+  }
+
+  if (!response.ok) {
+   throw new Error(data.error || "حدث خطأ في خدمة الذكاء الاصطناعي.");
+  }
+
+  if (!data.reply || typeof data.reply !== "string") {
+   throw new Error("وصل رد غير صالح من خدمة الذكاء الاصطناعي.");
+  }
+
+  const targetChat = chats.find(c => c.id === chatId);
+  if (targetChat) {
+   targetChat.messages.push({role:"assistant", text:data.reply});
+   save();
+  }
+
+  if (activeId === chatId) renderMessages();
+  renderHistory();
+  setStatus("متصل وجاهز");
+
+ } catch(error) {
+  if (error.name === "AbortError") {
+   // تم إيقاف الإجابة.
+  } else {
+   console.error("NOVA AI error:", error);
+
+   const targetChat = chats.find(c => c.id === chatId);
+   if (targetChat) {
+    targetChat.messages.push({
+     role:"assistant",
+     text:"تعذر الحصول على إجابة حالياً.\n" + (error.message || "تحقق من الاتصال بالإنترنت."),
+     error:true
+    });
+    save();
+   }
+
+   if (activeId === chatId) renderMessages();
+   renderHistory();
+   setStatus("تعذر الاتصال", "error");
+  }
+
+ } finally {
+  isSending = false;
+  abortController = null;
+
+  $("send").disabled = false;
+  $("send").classList.remove("stop");
+  $("send").textContent = "↑";
+  $("send").setAttribute("aria-label", "إرسال");
+  $("prompt").disabled = false;
+
+  if (activeId === chatId) renderMessages();
+
+  if (!$("status").classList.contains("error") &&
+      $("status").textContent.includes("NOVA يفكر")) {
+   setStatus("جاهز للاتصال");
+  }
+
+  $("prompt").focus();
+ }
+}
+
+function suggest(value) {
+ $("prompt").value = value;
+ resizePrompt();
+ $("prompt").focus();
+}
+
+function renderMessages() {
+ const chat = current();
+ const container = $("messages");
+ container.innerHTML = "";
+
+ if (!chat) return;
+
+ chat.messages.forEach(m => {
+  const row = document.createElement("div");
+  row.className = "message " +
+   (m.role === "user" ? "user" : "") +
+   (m.error ? " error" : "");
+
+  const avatar = document.createElement("div");
+  avatar.className = "message-avatar";
+  avatar.textContent = m.role === "user" ? "أنت" : "✦";
+
+  const content = document.createElement("div");
+  content.className = "message-content";
+
+  const text = document.createElement("div");
+  text.className = "message-text";
+  text.textContent = m.text;
+  content.append(text);
+
+  if (m.role === "assistant" && !m.error) {
+   const tools = document.createElement("div");
+   tools.className = "message-tools";
+
+   const copy = document.createElement("button");
+   copy.textContent = "نسخ الإجابة";
+   copy.onclick = () => copyMessage(m.text);
+
+   tools.append(copy);
+   content.append(tools);
+  }
+
+  row.append(avatar, content);
+  container.append(row);
+ });
+
+ if (isSending && activeId === chat.id) {
+  const row = document.createElement("div");
+  row.className = "message";
+
+  const avatar = document.createElement("div");
+  avatar.className = "message-avatar";
+  avatar.textContent = "✦";
+
+  const content = document.createElement("div");
+  content.className = "message-content";
+
+  const typing = document.createElement("div");
+  typing.className = "message-text typing";
+  typing.innerHTML = "<span></span><span></span><span></span>";
+
+  content.append(typing);
+  row.append(avatar, content);
+  container.append(row);
+ }
+
+ $("content").scrollTop = $("content").scrollHeight;
+}
+
+async function copyMessage(text) {
+ try {
+  await navigator.clipboard.writeText(text);
+  showToast("تم نسخ الإجابة.");
+ } catch(e) {
+  showToast("تعذر النسخ من هذا المتصفح.");
+ }
+}
+
+function openChat(id) {
+ activeId = id;
+ $("welcome").classList.add("hidden");
+ renderMessages();
+ renderHistory();
+ closeSidebar();
+}
+
+function deleteChat(id) {
+ if (!confirm("هل تريد حذف هذه المحادثة؟")) return;
+
+ chats = chats.filter(c => c.id !== id);
+
+ if (activeId === id) {
+  activeId = null;
+  $("messages").innerHTML = "";
+  $("welcome").classList.remove("hidden");
+ }
+
+ save();
+ renderHistory();
+}
+
+function renderHistory() {
+ const term = $("search").value.trim().toLowerCase();
+ const history = $("history");
+ history.innerHTML = "";
+
+ chats
+  .filter(c => String(c.title || "").toLowerCase().includes(term))
+  .forEach(c => {
+   const row = document.createElement("div");
+   row.className = "history-item " + (c.id === activeId ? "selected" : "");
+
+   const label = document.createElement("span");
+   label.textContent = c.title || "محادثة جديدة";
+   label.onclick = () => openChat(c.id);
+
+   const del = document.createElement("button");
+   del.className = "delete";
+   del.textContent = "×";
+   del.title = "حذف المحادثة";
+   del.onclick = e => {
+    e.stopPropagation();
+    deleteChat(c.id);
+   };
+
+   row.append(label, del);
+   history.append(row);
+  });
+}
+
+function handleKey(e) {
+ if (e.key === "Enter" && !e.shiftKey) {
+  e.preventDefault();
+  sendMessage();
+ }
+}
+
+function resizePrompt() {
+ const input = $("prompt");
+ input.style.height = "auto";
+ input.style.height = Math.min(input.scrollHeight, 150) + "px";
+}
+
+function openSettings() {
+ $("modalTitle").textContent = "إعدادات NOVA";
+ $("modalBody").innerHTML = `
+ <p>خصص لون واجهتك حسب ذوقك.</p>
+ <button class="primary" onclick="setTheme('#a58bff','#7356dc')">بنفسجي</button>
+ <button class="secondary" onclick="setTheme('#55aaff','#3475cf')">أزرق</button>
+ <button class="secondary" onclick="setTheme('#44c99b','#208b71')">أخضر</button>
+ <button class="secondary" onclick="setTheme('#ff9a51','#c56a32')">برتقالي</button>
+ <p>المحادثات محفوظة على هذا المتصفح لكل حساب بشكل مستقل.</p>
+ `;
+ $("modal").style.display = "flex";
+}
+
+function setTheme(a, b) {
+ document.documentElement.style.setProperty("--accent", a);
+ document.documentElement.style.setProperty("--accent2", b);
+ try {
+  localStorage.setItem("nova_theme", a + "|" + b);
+ } catch(e) {}
+}
+
+function showAbout() {
+ $("modalTitle").textContent = "حول NOVA AI";
+ $("modalBody").innerHTML = `
+ <p><strong>NOVA AI</strong> مساعد رقمي بواجهة عربية، صُمم لمساعدة المستخدمين على التعلم والإبداع والإجابة عن الأسئلة.</p>
+ <p><strong>صاحب المشروع:</strong> حمزة أيت افقير.</p>
+ <p>قام حمزة بتصميم واجهة NOVA AI وربطها بخدمة Free.ai التي توفر نموذج Qwen 7B لتوليد الإجابات.</p>
+ <p>حمزة هو صاحب مشروع NOVA AI، وليس مطوّر نموذج Qwen نفسه.</p>
+ `;
+ $("modal").style.display = "flex";
+}
+
+function closeModal() {
+ $("modal").style.display = "none";
+}
+
+$("modal").addEventListener("click", e => {
+ if (e.target === $("modal")) closeModal();
+});
+
+document.addEventListener("keydown", e => {
+ if (e.key === "Escape") {
+  closeSidebar();
+  closeModal();
+ }
+});
+
+window.addEventListener("resize", () => {
+ if (window.innerWidth > 700) closeSidebar();
+});
+
+try {
+ const savedTheme = localStorage.getItem("nova_theme");
+ if (savedTheme) {
+  const [a,b] = savedTheme.split("|");
+  if (a && b) setTheme(a,b);
+ }
+} catch(e) {}
+</script>
+</body>
+</html>
+```
